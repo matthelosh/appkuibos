@@ -1,16 +1,32 @@
 from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, Image, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 import os
+import locale
+import sys
 from datetime import datetime
+from helpers.utils import resource_path, get_identitas
 
 def cetakKuitansi(bku, output_path="kuitansi.pdf"):
     # Format tanggal
-    tanggal_obj = datetime.strptime(bku["tanggal"], "%Y-%m-%d")
-    tanggal_str = tanggal_obj.strftime("%d %B %Y")
+    try:
+        locale.setlocale(locale.LC_TIME, 'id_ID.utf8')
+    except locale.Error:
+        try:
+            locale.setlocale(locale.LC_TIME, 'ind')
+        except locale.Error:
+            try:
+                locale.setlocale(locale.LC_TIME, 'id_ID')
+            except locale.Error:
+                print("Locale Indonesia tidak tersedia di sistem")
+                # Continue with default locale
+            
+    th, bln, tgl = map(int, bku['tanggal'].split("-"))
+    tanggal = datetime(th, bln, tgl)
+    tanggal_str = tanggal.strftime("%d %B %Y")
 
     # Output file
     doc = SimpleDocTemplate(output_path, pagesize=A4,
@@ -18,26 +34,83 @@ def cetakKuitansi(bku, output_path="kuitansi.pdf"):
 
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='BoldCenter', parent=styles['Heading2'], alignment=1, fontSize=14))
-
+    styles.add(ParagraphStyle(name="KopTitle", parent=styles['Normal'], alignment=1, fontSize=14 ))
+    styles.add(ParagraphStyle(name="KopAlamat", parent=styles['Normal'], alignment=1, fontSize=10 ))
+    styles.add(ParagraphStyle(name="KopStyle", parent=styles['Normal'], fontSize=14, alignment=1, spaceAfter=0, leading=14))
     story = []
 
     # Header Sekolah
-    story.append(Paragraph("<b>PEMERINTAH KABUPATEN MALANG</b>", styles['Normal']))
-    story.append(Paragraph("DINAS PENDIDIKAN", styles['Normal']))
-    story.append(Paragraph("KOORDINATOR WILAYAH KECAMATAN WAGIR<br/><b>SD NEGERI 1 BEDALISODO</b>", styles['Normal']))
+    sekolah = get_identitas()
+    if not sekolah:
+        return {
+            "nama_sekolah" : "Atur Identitas dulu",
+            "alamat" : "Atur Identitas dulu",
+            "email" : "Atur Identitas dulu",
+            "website" : "Atur Identitas dulu",
+            "ks" : "Atur Identitas dulu",
+            "nip_ks" : "Atur Identitas dulu",
+            "bendahara" : "Atur Identitas dulu",
+            "nip_bendahara" : "Atur Identitas dulu",
+        }
+
+    #Logo
+    try:
+        logo_kab_path = resource_path("resources/logo_kab.png")
+        logo_kab = Image(logo_kab_path, width=2*cm, height=2.5*cm)
+    except Exception as e:
+        print(f"Error loading logo_kab: {e}")
+        # Use empty image as fallback
+        logo_kab = Spacer(2*cm, 2.5*cm)
+        
+    try:
+        logo_sekolah_path = resource_path("resources/logo_sekolah.png")
+        logo_sekolah = Image(logo_sekolah_path, width=2*cm, height=2*cm)
+    except Exception as e:
+        print(f"Error loading logo_sekolah: {e}")
+        # Use empty image as fallback
+        logo_sekolah = Spacer(2*cm, 2*cm)
+
+    #Teks Kop
+    kop_text = Paragraph(
+        f"<b><font size=13>PEMERINTAH KABUPATEN MALANG</font></b><br/>"
+        f"<b><font size=12>DINAS PENDIDIKAN</font></b><br/>"
+        f"<b><font size=11>KORWIL KECAMATAN WAGIR</font></b><br/>"
+        f"<b><font size=13>{sekolah.get('nama_sekolah')}</font></b><br/>"
+        f"<font size=10>{sekolah.get('alamat')}</font><br/>"
+        f"<font size=10>Email: {sekolah.get('email')}, Website: {sekolah.get('website')}</font><br/>",
+        styles['KopStyle']
+    )
+
+    kop_table = Table(
+        [[logo_kab, kop_text, logo_sekolah]],
+        colWidths=[2*cm, 11*cm, 3*cm]
+    )
+
+    kop_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (1,0), (1,0), 'CENTER'),
+        ('BOX', (0,0), (-1,-1), 0, colors.white)
+    ]))
+
+    story.append(kop_table)
+
+    # Garis HR
+    story.append(HRFlowable(width="100%", thickness=2, color='black', spaceBefore=1, spaceAfter=1, hAlign='CENTER'))
+
     story.append(Spacer(1, 0.3*cm))
     story.append(Paragraph("<b>KUITANSI</b>", styles['BoldCenter']))
     story.append(Spacer(1, 0.2*cm))
 
     # Kode Rekening dan Kegiatan
-    story.append(Paragraph("Kode Rekening: 5.1.02.02.01.00.30 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kode Kegiatan: 07.12.02.", styles['Normal']))
+    story.append(Paragraph("Kode Rekening: 5.1.02.02.01.00.30 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kode Kegiatan: 07.12.02.", styles['KopAlamat']))
     story.append(Spacer(1, 0.3*cm))
 
     # Tabel Isi
     data = [
         ["Sudah diterima dari", ":", "Bendahara BOS Reguler SD Negeri 1 Bedalisodo"],
         ["Uang Sebesar", ":", Paragraph(f"<i>{terbilang(bku['nilai'])}</i>")],
-        ["Untuk Keperluan", ":", bku["uraian"]],
+        ["Untuk Keperluan", ":", Paragraph(f"{bku['uraian']}")],
+        ["Terbilang", ":", ""],
     ]
     table = Table(data, colWidths=[4.5*cm, 0.5*cm, 10*cm])
     table.setStyle(TableStyle([
@@ -46,75 +119,47 @@ def cetakKuitansi(bku, output_path="kuitansi.pdf"):
     ]))
     story.append(table)
 
-    story.append(Spacer(1, 0.5*cm))
-    story.append(Paragraph("<b>Bukti / Berkas Terlampir</b>", styles['Normal']))
-    story.append(Spacer(1, 0.2*cm))
-
-    # Terbilang dan nilai nominal
-    story.append(Paragraph("Terbilang", styles['Normal']))
-    story.append(Spacer(1, 0.2*cm))
-    # nilai_formatted = f"{int(bku['nilai']):,}".replace(",",".")
-    story.append(Paragraph(f"<b><font size=14>Rp. {bku['nilai']},-</font></b>".replace(",", "."), styles['BoldCenter']))
+    nilai = [[Paragraph(f"<b><font size=14>Rp. {bku['nilai']},-</font></b>".replace(",", "."), styles['Title'])]]
+    box_nilai = Table(nilai, colWidths=[200])
+    box_nilai.setStyle(TableStyle([
+        ('BOX', (0,0), (-1,-1), 1,colors.black),
+        ('ALIGN', (0,0), (-1,-1) ,'CENTER'),
+        ('VALIGN', (0,0), (-1,-1) ,'MIDDLE'),
+        ('PADDING', (0,0), (-1,-1) , 6),
+    ]))
+    story.append(box_nilai)
     story.append(Spacer(1, 1*cm))
 
+    
     # TTD Table
     ttd_table = Table([
-        [Paragraph("Menyetujui,<br/>Kepala Sekolah"), "", Paragraph(f"Malang, {tanggal_str}<br/>Yang Menerima",)],
-        [Paragraph("<br/><br/><br/><b>NURUL HUDA</b><br/>NIP. 196802261993011004"), "", Paragraph(f"<br/><br/><br/><b>......................</b>")],
-        ["", "Bendahara", ""],
-        ["", Paragraph("<b>RIRIN TIA VRIONICA</b><br/>NIP. 198502202022122002"), ""],
+        [
+            Paragraph("Menyetujui,<br/>Kepala Sekolah"), 
+            Paragraph("<br/>Bendahara<br/><br/><br/>"),
+            Paragraph(f"Malang, {tanggal_str}<br/>Yang Menerima",)
+        ],
+        [
+            Paragraph(f"<br/><br/><br/><b>{sekolah.get('ks')}</b><br/>NIP. {sekolah.get('nip_ks')}"), 
+            Paragraph(f"<b>{sekolah.get('bendahara')}</b><br/>NIP. {sekolah.get('nip_bendahara')}"), 
+            Paragraph(f"<br/><br/><b>....................................</b>")],
     ], colWidths=[6*cm, 6*cm, 5*cm])
 
     ttd_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,0), 'MIDDLE'),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('SPAN', (1,2), (1,2)),
         ('SPAN', (1,3), (1,3)),
     ]))
     story.append(ttd_table)
+    story.append(Spacer(1, 1*cm))
+    story.append(Spacer(1, 0.5*cm))
+    story.append(HRFlowable(width="30%", thickness=1, color='black', spaceBefore=1, spaceAfter=1, hAlign='LEFT'))
+    story.append(Paragraph("<b><i>Bukti / Berkas Terlampir *)</i></b>", styles['Normal']))
+
 
     # Build dokumen
     doc.build(story)
     output_path
-
-
-
-    # c = canvas.Canvas(output_path, pagesize=A4)
-    # width, height = A4
-
-    # c.setFont("Helvetica-Bold", 14)
-    # c.drawCentredString(width / 2, height - 2 * cm, "KUITANSI")
-
-    # c.setFont("Helvetica", 11)
-
-    # # Isi Data
-    # c.drawString(2 * cm, height - 3.5 * cm, f"No. Bukti         : {data['no_bukti']}")
-    # c.drawString(2 * cm, height - 4.5 * cm, f"Tanggal           : {data['tanggal']}")
-    # c.drawString(2 * cm, height - 5.5 * cm, f"Kode Kegiatan     : {data['kode_kegiatan']}")
-    # c.drawString(2 * cm, height - 6.5 * cm, f"Kode Rekening     : {data['kode_rekening']}")
-    # c.drawString(2 * cm, height - 7.5 * cm, f"Untuk Keperluan   : ")
-
-    # #Uraian
-    # uraian = data['uraian']
-    # text = c.beginText(3 * cm, height - 8.5 * cm)
-    # text.setFont("Helvetica-Oblique", 11)
-    # for line in uraian.split("\n"):
-    #     text.textLine(line)
-    
-    # c.drawText(text)
-
-    # #Jumlah Uang
-    # c.setFont("Helvetica-Bold", 12)
-    # c.drawString(2 * cm, height - 12 * cm, f"Jumlah             : Rp. {data['nilai']}")
-    
-    # #Terbilang
-    # c.setFont("Helvetica-Bold", 10)
-    # c.drawString(2 * cm, height - 13 * cm, f"Terbilang             :  { terbilang(data['nilai']) }")
-
-    # #Tanda tangan
-    # c.setFont("Helvetica", 11)
-    # c.drawRightString(width - 2 * cm, 4 * cm, "Bendahara")
-
-    # c.save()
 
 def terbilang(nilai):
     angka = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"]

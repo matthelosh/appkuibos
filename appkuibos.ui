@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Aplikasi Cetak Kuitansi BOS</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -59,41 +59,67 @@
        <property name="frameShadow">
         <enum>QFrame::Raised</enum>
        </property>
-       <widget class="QPushButton" name="btn_bku">
+       <widget class="QPushButton" name="btn_from_bku">
         <property name="geometry">
          <rect>
-          <x>20</x>
+          <x>30</x>
           <y>10</y>
           <width>75</width>
           <height>23</height>
          </rect>
         </property>
         <property name="text">
-         <string>BKU</string>
+         <string>File BKU</string>
         </property>
         <property name="icon">
          <iconset>
-          <normaloff>resources/financial-database.png</normaloff>resources/financial-database.png</iconset>
+          <normaloff>resources/logo_pdf.png</normaloff>resources/logo_pdf.png</iconset>
         </property>
         <property name="flat">
          <bool>true</bool>
         </property>
        </widget>
-       <widget class="QPushButton" name="btn_kuitansi">
+       <widget class="QPushButton" name="btn_from_db">
         <property name="geometry">
          <rect>
-          <x>80</x>
+          <x>100</x>
           <y>10</y>
-          <width>75</width>
+          <width>101</width>
           <height>23</height>
          </rect>
         </property>
         <property name="text">
-         <string>Kuitansi</string>
+         <string>Dari Database</string>
         </property>
         <property name="icon">
          <iconset>
-          <normaloff>../belajar/ledger.png</normaloff>../belajar/ledger.png</iconset>
+          <normaloff>resources/logo_db.png</normaloff>resources/logo_db.png</iconset>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="btn_setting">
+        <property name="geometry">
+         <rect>
+          <x>852</x>
+          <y>4</y>
+          <width>32</width>
+          <height>32</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/icon_gear.png</normaloff>resources/icon_gear.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>28</width>
+          <height>28</height>
+         </size>
         </property>
         <property name="flat">
          <bool>true</bool>
@@ -128,27 +154,7 @@
            <property name="styleSheet">
             <string notr="true">background-color: rgb(248, 251, 255);</string>
            </property>
-           <widget class="QLabel" name="label_bku">
-            <property name="geometry">
-             <rect>
-              <x>30</x>
-              <y>10</y>
-              <width>171</width>
-              <height>16</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Data BKU / Transaksi</string>
-            </property>
-           </widget>
-           <widget class="QTableWidget" name="tableWidget">
+           <widget class="QTableWidget" name="table_bku">
             <property name="geometry">
              <rect>
               <x>30</x>
@@ -187,6 +193,98 @@
               <string>Nilai</string>
              </property>
             </column>
+           </widget>
+           <widget class="QWidget" name="">
+            <property name="geometry">
+             <rect>
+              <x>30</x>
+              <y>500</y>
+              <width>841</width>
+              <height>23</height>
+             </rect>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QProgressBar" name="progress_bar">
+               <property name="value">
+                <number>24</number>
+               </property>
+               <property name="textVisible">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_loading">
+               <property name="text">
+                <string>Loading...</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="">
+            <property name="geometry">
+             <rect>
+              <x>30</x>
+              <y>10</y>
+              <width>841</width>
+              <height>25</height>
+             </rect>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QLabel" name="label_bku">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>1</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Data BKU / Transaksi</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_print_selected">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="toolTip">
+                <string>Cetak BKU Terpilih</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="text">
+                <string>Cetak Kuitansi</string>
+               </property>
+               <property name="flat">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </widget>
           <widget class="QWidget" name="page_kuitansi">

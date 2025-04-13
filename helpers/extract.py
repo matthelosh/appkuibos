@@ -38,7 +38,6 @@ def pdfTable(pdf_path):
     )
 
     final_df = pd.concat([header_row, data_rows], ignore_index=True)
-    datas = final_df.to_dict(orient='records')
     return header_row, data_rows
 
 def groupBkuByBukti(bkus):
