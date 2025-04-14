@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from helpers.utils import resource_path, get_identitas
 
-def cetakKuitansi(bku, output_path="kuitansi.pdf"):
+def cetakKuitansi(bku, file_name="kuitansi.pdf"):
     # Format tanggal
     try:
         locale.setlocale(locale.LC_TIME, 'id_ID.utf8')
@@ -29,8 +29,10 @@ def cetakKuitansi(bku, output_path="kuitansi.pdf"):
     tanggal_str = tanggal.strftime("%d %B %Y")
 
     # Output file
+    os.makedirs("./output", exist_ok=True)
+    output_path = f"output/{file_name}"
     doc = SimpleDocTemplate(output_path, pagesize=A4,
-                            rightMargin=2*cm, leftMargin=2*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+                            rightMargin=1.8*cm, leftMargin=2*cm, topMargin=0.3*cm, bottomMargin=1.5*cm)
 
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='BoldCenter', parent=styles['Heading2'], alignment=1, fontSize=14))
@@ -62,13 +64,14 @@ def cetakKuitansi(bku, output_path="kuitansi.pdf"):
         # Use empty image as fallback
         logo_kab = Spacer(2*cm, 2.5*cm)
         
-    try:
-        logo_sekolah_path = resource_path("resources/logo_sekolah.png")
-        logo_sekolah = Image(logo_sekolah_path, width=2*cm, height=2*cm)
-    except Exception as e:
-        print(f"Error loading logo_sekolah: {e}")
-        # Use empty image as fallback
-        logo_sekolah = Spacer(2*cm, 2*cm)
+    # try:
+    #     logo_sekolah_path = resource_path("./logo_sekolah.png")
+    #     logo_sekolah = Image(logo_sekolah_path, width=2*cm, height=2*cm)
+
+    # except Exception as e:
+    #     print(f"Error loading logo_sekolah: {e}")
+    #     # Use empty image as fallback
+    logo_sekolah = Spacer(2*cm, 2*cm)
 
     #Teks Kop
     kop_text = Paragraph(
@@ -82,8 +85,8 @@ def cetakKuitansi(bku, output_path="kuitansi.pdf"):
     )
 
     kop_table = Table(
-        [[logo_kab, kop_text, logo_sekolah]],
-        colWidths=[2*cm, 11*cm, 3*cm]
+        [[logo_kab, kop_text]],
+        colWidths=[2*cm, 13*cm]
     )
 
     kop_table.setStyle(TableStyle([
@@ -95,6 +98,7 @@ def cetakKuitansi(bku, output_path="kuitansi.pdf"):
     story.append(kop_table)
 
     # Garis HR
+    story.append(HRFlowable(width="100%", thickness=1, color='black', spaceBefore=1, spaceAfter=1, hAlign='CENTER'))
     story.append(HRFlowable(width="100%", thickness=2, color='black', spaceBefore=1, spaceAfter=1, hAlign='CENTER'))
 
     story.append(Spacer(1, 0.3*cm))
