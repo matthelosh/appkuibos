@@ -1,6 +1,39 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QWidget, QPushButton
 import json
 import os
+from helpers.cetak import cetakKuitansi
+
+class FormKuitansi(QDialog):
+    def __init__(self, parent=None, data=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Edit Kuitansi")
+        self.setMinimumWidth(600)
+        # self.setMinimumHeight(700)
+        self.content = QWidget()
+        self.content_layout = QFormLayout()
+        self.fields_input = {}
+        if data:
+            fields = ("Tanggal", "Kode Kegiatan", "Kode Rekening", "No. Bukti", "Uraian", "Nilai", "Penerima")
+
+            for i, f in enumerate(fields):
+                # self.content_layout.addRow(f, QLineEdit(data[i+1]))
+                line_edit = QLineEdit(data[i+1])
+                self.fields_input[f] = line_edit
+                self.content_layout.addRow(f, line_edit)
+
+        self.content.setLayout(self.content_layout)
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.content)
+        btn_cetak = QPushButton("Cetak")
+        btn_cetak.clicked.connect(self.cetak)
+        main_layout.addWidget(btn_cetak)
+
+        self.setLayout(main_layout)
+    def cetak(self):
+        hasil = { label.replace(" ","_").replace(".","").lower(): widget.text() for label, widget in self.fields_input.items()}
+        
 
 class FormIdentitas(QDialog):
     def __init__(self, parent=None):

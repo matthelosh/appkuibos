@@ -1,19 +1,19 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QDialog
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QDialog, QMessageBox
 from PyQt5.QtGui import QIcon, QPainter, QPixmap
 import os
 import platform
 from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
 from pdf2image import convert_from_path
 
-from helpers.utils import resource_path
+from helpers.utils import resource_path, save2DB
 from helpers.extract import pdfTable, groupBkuByBukti
 from helpers.cetak import cetakKuitansi
 
 from threads.pdf_extractor_thread import PDFExtractorThread
-from parts.dialogs import FormIdentitas
+from parts.dialogs import FormIdentitas, FormKuitansi
 
 if platform.system() == "Windows":
     gs_path = os.path.abspath("lib/ghostscript/bin")
@@ -38,20 +38,24 @@ class MainWindow(QMainWindow):
         self.btn_setting.clicked.connect(self.show_dialog_id)
         #Cetak Baris terpilih
         self.btn_print_selected.clicked.connect(self.printSelectedBku)
+        self.btn_simpan_db.clicked.connect(self.save2Db)
 
         # Tes
-        # self.startExtraction('./contoh/bku.pdf')
+        self.startExtraction('./contoh/bku.pdf')
+
+        # Transaksi
+        self.transaksis = []
 
     def finishExtraction(self, header, bkus):
         self.progress_bar.hide()
         self.label_loading.setText("Selsai")
 
         self.table_bku.setRowCount(len(bkus))
-        self.table_bku.setColumnCount(7)
+        self.table_bku.setColumnCount(8)
         self.table_bku.setHorizontalHeaderLabels([
-            "#", "Tanggal", "Kode Kegiatan", "Kode Rekening", "No. Bukti", "Uraian", "Nominal"
+            "#", "Tanggal", "Kode Kegiatan", "Kode Rekening", "No. Bukti", "Uraian", "Nominal", "Opsi"
         ])
-
+        self.transaksis = []
         for row, bku in enumerate(bkus):
             values = [
                 str(row + 1),
@@ -60,8 +64,19 @@ class MainWindow(QMainWindow):
                 bku["kode_rekening"],
                 bku["no_bukti"],
                 bku["uraian"],
-                bku["nilai"]
+                bku["nilai"],
+                "penerima"
             ]
+            
+            self.transaksis.append({
+                "tanggal": bku["tanggal"],
+                "kode_kegiatan": bku["kode_kegiatan"],
+                "kode_rekening": bku["kode_rekening"],
+                "no_bukti": bku["no_bukti"],
+                "uraian": bku["uraian"],
+                "nilai": bku["nilai"],
+                "penerima": '' 
+            })
 
             for col, val in enumerate(values):
                 if col == 4:
@@ -69,7 +84,17 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignVCenter)
                     item.setFlags(item.flags() ^ QtCore.Qt.ItemFlag.ItemIsEditable)
                     self.table_bku.setItem(row, col, item)
-                    
+                elif col == 7:
+                    btn_edit = QtWidgets.QPushButton("Edit")
+                    btn_edit.clicked.connect(lambda _, data=values: self.editKuitansi(data))
+
+                    cell_widget = QtWidgets.QWidget()
+                    layout = QtWidgets.QHBoxLayout(cell_widget)
+                    layout.addWidget(btn_edit)
+                    layout.setAlignment(btn_edit, QtCore.Qt.AlignCenter)
+                    layout.setContentsMargins(5,2,5,2)
+
+                    self.table_bku.setCellWidget(row, col, cell_widget)
                 else:
                     label = QtWidgets.QLabel(str(val))
                     if col == 0:
@@ -93,6 +118,10 @@ class MainWindow(QMainWindow):
         self.table_bku.verticalHeader().setVisible(False)
 
         QtCore.QTimer.singleShot(2000, lambda: self.label_loading.hide())
+
+    def editKuitansi(self, data):
+        form_kuitansi = FormKuitansi(self, data)
+        form_kuitansi.exec_()
 
     def gagalExtraction(self, pesan):
         self.progress_bar.hide()
@@ -171,6 +200,12 @@ class MainWindow(QMainWindow):
         self.thread.gagal.connect(self.gagalExtraction)
         self.thread.start()
 
+    def save2Db(self):
+        success, message = save2DB(self.transaksis)
+        if success:
+            QMessageBox.information(self, "Info", message)
+        else:
+            QMessageBox.warning(self, "Error", message)
     def fromDB(self):
         dialog = QDialog(self, )
         dialog.setWindowTitle("Info")
