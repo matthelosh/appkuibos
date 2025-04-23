@@ -1,0 +1,158 @@
+name: Build and Release Windows Executable
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on any tag starting with 'v'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller pywebview
+        pip install wheel setuptools
+      
+    - name: Display Python and pip versions
+      run: |
+        python --version
+        pip --version
+        
+    - name: Verify required resources
+      run: |
+        # Check templates directory
+        if (Test-Path "templates") {
+          echo "✅ Templates directory exists"
+          Get-ChildItem "templates" | ForEach-Object { echo "  - $_" }
+        } else {
+          echo "❌ Templates directory not found"
+          exit 1
+        }
+
+        # Check resources directory
+        if (Test-Path "resources") {
+          echo "✅ Resources directory exists"
+          Get-ChildItem "resources" | ForEach-Object { echo "  - $_" }
+          
+          # Check for logo file
+          if (Test-Path "resources/logo_kab.png") {
+            echo "✅ Logo file exists"
+          } else {
+            echo "❌ Logo file not found"
+            exit 1
+          }
+        } else {
+          echo "❌ Resources directory not found"
+          exit 1
+        }
+        
+    - name: Create version file from tag
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag.TrimStart("v")
+        echo "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo "Creating build for version $version"
+        
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --clean --name AppKuiBOS-${{ env.APP_VERSION }} --onedir --windowed --icon=resources/logo_kab.png `
+          --add-data "templates;templates" `
+          --add-data "resources;resources" `
+          --hidden-import webview `
+          --hidden-import jinja2 `
+          --hidden-import babel.numbers `
+          --hidden-import weasyprint `
+          --hidden-import locale `
+          --hidden-import base64 `
+          --hidden-import decimal `
+          main.py
+        
+        echo "PyInstaller build completed"
+      continue-on-error: false
+      
+    - name: Test executable exists
+      run: |
+        if (Test-Path "dist/AppKuiBOS-${{ env.APP_VERSION }}/AppKuiBOS-${{ env.APP_VERSION }}.exe") {
+          echo "✅ Executable built successfully"
+        } else {
+          echo "❌ Executable not found"
+          exit 1
+        }
+        
+    - name: Create ZIP archive
+      run: |
+        # Create a README file in the dist directory
+        Set-Content -Path "dist/AppKuiBOS-${{ env.APP_VERSION }}/README.txt" -Value @"
+        AppKuiBOS ${{ env.APP_VERSION }}
+        ===================
+
+        Aplikasi Kuitansi BOS
+
+        Petunjuk Penggunaan:
+        1. Jalankan AppKuiBOS-${{ env.APP_VERSION }}.exe
+        2. Pastikan semua folder resources dan templates tidak diubah
+
+        Support: github.com/matsoleh/appkuibos
+        "@
+
+        # Create the ZIP archive
+        cd dist
+        echo "Creating ZIP archive..."
+        Compress-Archive -Path "AppKuiBOS-${{ env.APP_VERSION }}" -DestinationPath "AppKuiBOS-${{ env.APP_VERSION }}-windows.zip" -Force
+        
+        # Verify the ZIP was created successfully
+        if (Test-Path "AppKuiBOS-${{ env.APP_VERSION }}-windows.zip") {
+          echo "✅ ZIP archive created successfully"
+          echo "Size: $((Get-Item "AppKuiBOS-${{ env.APP_VERSION }}-windows.zip").length / 1MB) MB"
+        } else {
+          echo "❌ Failed to create ZIP archive"
+          exit 1
+        }
+        cd ..
+        
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: AppKuiBOS ${{ env.APP_VERSION }}
+        draft: false
+        prerelease: false
+        files: |
+          dist/AppKuiBOS-${{ env.APP_VERSION }}-windows.zip
+        body: |
+          # AppKuiBOS ${{ env.APP_VERSION }}
+          
+          Aplikasi Kuitansi BOS
+          
+          ## System Requirements
+          - Windows 10 or higher
+          
+          ## Installation
+          1. Download the zip file
+          2. Extract to desired location
+          3. Run AppKuiBOS-${{ env.APP_VERSION }}.exe
+          
+          ## Features
+          - HTML and PDF preview functionality
+          - Save receipt as PDF
+          - Print functionality
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-executable
+        path: dist/AppKuiBOS-${{ env.APP_VERSION }}-windows.zip
+
