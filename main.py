@@ -1,7 +1,7 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QDialog, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QDialog, QMessageBox, QHBoxLayout
 from PyQt5.QtGui import QIcon, QPainter, QPixmap
 import os
 import platform
@@ -28,6 +28,12 @@ class MainWindow(QMainWindow):
         loadUi(ui_path, self)
         icon_path = resource_path("resources/ledger.png")
         self.setWindowIcon(QIcon(icon_path))
+        frame_toolbar_layout = QHBoxLayout()
+        frame_toolbar_layout.addStretch()
+        self.frame_toolbar.setLayout(frame_toolbar_layout)
+        self.frame_toolbar.setStyleSheet("border:none;")
+        self.btn_from_bku.adjustSize()
+        self.btn_from_db.adjustSize()
         self.btn_from_bku.clicked.connect(self.pickFile)
         self.btn_from_db.clicked.connect(self.fromDB)
         self.progress_bar.hide()

@@ -1,38 +1,89 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDialogButtonBox, QLabel, QWidget, QPushButton
+from PyQt5.QtWidgets import (QDialog, 
+                            QVBoxLayout, 
+                            QFormLayout, 
+                            QLineEdit, 
+                            QDialogButtonBox, 
+                            QLabel, 
+                            QWidget, 
+                            QPushButton, 
+                            QTextEdit, 
+                            QComboBox,
+                            QMessageBox,
+                            QHBoxLayout
+                            )
 import json
 import os
 from helpers.cetak import cetakKuitansi
+from helpers.utils import updateBku
 
 class FormKuitansi(QDialog):
     def __init__(self, parent=None, data=None):
         super().__init__(parent)
-
         self.setWindowTitle("Edit Kuitansi")
         self.setMinimumWidth(600)
         # self.setMinimumHeight(700)
         self.content = QWidget()
         self.content_layout = QFormLayout()
+        self.content_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.fields_input = {}
         if data:
             fields = ("Tanggal", "Kode Kegiatan", "Kode Rekening", "No. Bukti", "Uraian", "Nilai", "Penerima")
-
+            self.fields_input['id'] = data[0]
             for i, f in enumerate(fields):
                 # self.content_layout.addRow(f, QLineEdit(data[i+1]))
-                line_edit = QLineEdit(data[i+1])
-                self.fields_input[f] = line_edit
-                self.content_layout.addRow(f, line_edit)
+                idx = i+1
+                if idx == 5:
+                    field = QTextEdit(data[idx])
+                elif idx == 7:
+                    field = QComboBox()
+                    field.addItems(['Penerima', 'Pelaksana', 'Tim Belanja'])
+                else:
+                    field = QLineEdit(data[idx])
+                self.fields_input[f] = field
+                self.content_layout.addRow(f, field)
 
+        
         self.content.setLayout(self.content_layout)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.content)
+        btn_update = QPushButton("Perbarui data")
+        btn_update.clicked.connect(self.update)
         btn_cetak = QPushButton("Cetak")
         btn_cetak.clicked.connect(self.cetak)
-        main_layout.addWidget(btn_cetak)
+        footer = QWidget()
+        footer_layout = QHBoxLayout()
+        footer_layout.addWidget(btn_update)
+        footer_layout.addWidget(btn_cetak)
+        footer.setLayout(footer_layout)
+        main_layout.addWidget(footer)
 
         self.setLayout(main_layout)
+
+    def update(self):
+        bku = self.getFormData()
+        succes, message = updateBku(bku)
+        if succes:
+            QMessageBox.information(self, "Info", message)
+        else:
+            QMessageBox.warning(self, "Error", message)
+
     def cetak(self):
-        hasil = { label.replace(" ","_").replace(".","").lower(): widget.text() for label, widget in self.fields_input.items()}
+        bku = self.getFormData()
+        print(bku)
+
+    def getFormData(self):
+        hasil = { }
+        hasil['id'] = self.fields_input['id']
+        for label, widget in self.fields_input.items():
+            key = label.replace(" ","_").replace(".","").lower()
+            if isinstance(widget, QLineEdit):
+                hasil[key] = widget.text()
+            elif isinstance(widget, QTextEdit):
+                hasil[key] = widget.toPlainText()
+            elif isinstance(widget, QComboBox):
+                hasil[key] = widget.currentText()
+        return hasil
         
 
 class FormIdentitas(QDialog):

@@ -54,11 +54,11 @@
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QFrame" name="frame">
+          <widget class="QFrame" name="frame_toolbar">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>1</horstretch>
-             <verstretch>0</verstretch>
+             <verstretch>1</verstretch>
             </sizepolicy>
            </property>
            <property name="frameShape">

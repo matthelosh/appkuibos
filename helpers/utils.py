@@ -3,6 +3,10 @@ import os
 import json
 import sqlite3
 
+
+db = sqlite3.connect("./data/db.sqlite")
+cursor = db.cursor()
+
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
@@ -23,10 +27,39 @@ def get_identitas(file_path="./data/identitas.json"):
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
+def updateBku(data):
+    try:
+        sql = """
+            UPDATE bkus SET
+                tanggal=?,
+                kode_kegiatan=?, 
+                kode_rekening=?, 
+                uraian=?, 
+                nilai=?, 
+                penerima=?
+            WHERE no_bukti=?
+        """
+        values = (
+            data['tanggal'],
+            data['kode_kegiatan'],
+            data['kode_rekening'],
+            data['uraian'],
+            data['nilai'],
+            data['penerima'],
+            data['no_bukti']
+        )
+        cursor.execute(sql, values )
+        db.commit()
+        db.close()
+
+        return True, f"BKU dengan No Bukti: {data['no_bukti']} diperbarui."
+    except Exception as e:
+        return False, f"Error: {e}"
+
 def save2DB(data):
     try: 
-        db = sqlite3.connect("./data/db.sqlite")
-        cursor = db.cursor()
+        # db = sqlite3.connect("./data/db.sqlite")
+        # cursor = db.cursor()
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS bkus( 
         id Int auto_increment PRIMARY KEY, 
